@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "933894710212",
+    "firebase_url": "https://fir-test-ab874-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "fir-test-ab874",
+    "storage_bucket": "fir-test-ab874.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:933894710212:android:a3c48c9f99fff187a4ba91",
+        "android_client_info": {
+          "package_name": "com.kcy.FirebaseTest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWcXhRktz6Wf5lImeA_WkeuWVcrb0EnhU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
