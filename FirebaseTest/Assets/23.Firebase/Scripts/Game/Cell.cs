@@ -11,23 +11,56 @@ public class Cell : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IP
 
 	public Board board;
 
+	public bool isClick = false;
+
+	private GameObject blueMark;
+	private GameObject redMark;
+
+	private void Awake()
+	{
+		blueMark = Instantiate(board.blueMark, transform);
+		redMark = Instantiate(board.redMark, transform);
+		blueMark.SetActive(false);
+		redMark.SetActive(false);
+	}
+
 	public async void OnPointerClick(PED eventData)
 	{
 		//print(coodinate);
+		if (isClick) return;
 
 		bool ismyFukingTurn = await FirebaseManager.Instance.GetTurn();
-		if (ismyFukingTurn) board.SelectCell(this);
-
+		if (ismyFukingTurn)
+		{
+			board.SelectCell(this);
+			//isClick = true;
+		}
 	}
 
 	public void OnPointerEnter(PED eventData)
 	{
-
+		if (isClick) return;
+		if (board.isHost)
+		{
+			blueMark.SetActive(true);
+		}
+		else
+		{
+			redMark.SetActive(true);
+		}
 	}
 
 	public void OnPointerExit(PED eventData)
 	{
-
+		if (isClick) return;
+		if (board.isHost)
+		{
+			blueMark.SetActive(isClick);
+		}
+		else
+		{
+			redMark.SetActive(isClick);
+		}
 	}
 
 

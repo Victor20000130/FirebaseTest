@@ -15,6 +15,9 @@ public class Board : MonoBehaviour
 	public bool isHost;
 	public int turnCount = 0;
 
+	private int[][] board;
+
+
 	private void Awake()
 	{
 		cells = GetComponentsInChildren<Cell>();
@@ -25,6 +28,7 @@ public class Board : MonoBehaviour
 			{
 				cells[cellNum].coodinate = $"{(char)(x + 65)}{y + 1}";
 				cellNum++;
+				board[y][x] = 0;
 			}
 		}
 
@@ -52,8 +56,19 @@ public class Board : MonoBehaviour
 
 		Cell targetCell = cellDictionary[coodinate];
 
+
+		Parssing(coodinate);
+
 		Instantiate(prefab, targetCell.transform, false);
+		targetCell.isClick = true;
 		//cellDictionary.Remove(coodinate);
+	}
+
+	char[] chars;
+	private void Parssing(string coodinate)
+	{
+		coodinate.Split(chars);
+
 
 	}
 }
