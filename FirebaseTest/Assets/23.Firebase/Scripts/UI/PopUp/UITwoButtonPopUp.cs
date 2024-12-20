@@ -13,7 +13,8 @@ public class UITwoButtonPopUp : UIPopUp
 	protected override void Awake()
 	{
 		base.Awake();
-		okButton.onClick.AddListener(CloseButtonClick);
+		okButton.onClick.AddListener(OkButtonClick);
+
 	}
 
 	public void SetPopUp(string title, string message, Action<bool> callback)

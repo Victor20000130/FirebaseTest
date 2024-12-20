@@ -30,7 +30,7 @@ public class UIPopUp : MonoBehaviour
 
 	protected virtual void CloseButtonClick()
 	{
-		callBack?.Invoke();
 		UIManager.Instance.PopUpClose();
+		callBack?.Invoke();
 	}
 }

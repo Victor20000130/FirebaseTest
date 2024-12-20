@@ -9,6 +9,10 @@ using System.Security.Cryptography;
 using UnityEditor;
 using UnityEngine;
 using Newtonsoft.Json;
+using System.Threading.Tasks;
+using System.Runtime.InteropServices.WindowsRuntime;
+using System.Linq;
+
 
 public class FirebaseManager : MonoBehaviour
 {
@@ -20,13 +24,171 @@ public class FirebaseManager : MonoBehaviour
 
 	private DatabaseReference usersRef;
 
+	private DatabaseReference msgRef;
+
+	private DatabaseReference roomRef;
+
+	public event Action onLogin;
+
+	public event Action<Room, bool> onGameStart;
+
+	public event Action<Turn> onTurnProcceed;
+
+	private Room currentRoom;
+
 	public UserData currentUserData { get; private set; }
+
+	private bool isHost;
+
+	private DatabaseReference turnRef;
 
 
 	private void Awake()
 	{
 		Instance = this;
 		DontDestroyOnLoad(gameObject);
+		onLogin += OnLogin;
+	}
+
+	private void OnLogin()
+	{
+		msgRef = DB.GetReference($"msg/{Auth.CurrentUser.UserId}");
+
+		//비동기 식으로 변경될 때마다 Firebase가 알아서 호출해준다.
+		msgRef.ChildAdded += OnMessageReceive;
+	}
+
+	//DatabaseReference.ChildAdded 이벤트에 등록할 이벤트 함수
+	private void OnMessageReceive(object sender, ChildChangedEventArgs args)
+	{   //에러가 없으면
+		if (args.DatabaseError == null)
+		{
+			string rawJson = args.Snapshot.GetRawJsonValue();
+
+			Message message = JsonConvert.DeserializeObject<Message>(rawJson);
+			//print(rawJson);
+
+			if (message.isNew)
+			{
+				if (message.type == MessageType.Message)
+				{
+					var popup = UIManager.Instance.PopUpOpen<UIDialogPopUp>();
+
+					popup.SetPopUp($"From.{message.sender}", $"{message.message}\n{message.GetSendTime()}");
+				}
+				else if (message.type == MessageType.Invite)
+				{
+					var popup = UIManager.Instance.PopUpOpen<UITwoButtonPopUp>();
+					popup.SetPopUp("초대장", $"{message.displayName}님의 게임에 참가하시겠습니까?",
+						ok => { if (ok) { JoinRoom(message.sender); } });
+				}
+
+				args.Snapshot.Reference.Child("isNew").SetValueAsync(false);
+			}
+		}
+		else
+		{   //에러가 발생
+			Debug.LogWarning("missing args");
+		}
+
+	}
+
+	public async Task CreateRoom(Room room)
+	{
+		currentRoom = room;
+
+		isHost = true;
+
+		roomRef = DB.GetReference($"rooms/{Auth.CurrentUser.UserId}");
+		turnRef = DB.GetReference($"rooms/{Auth.CurrentUser.UserId}/turn");
+		string json = JsonConvert.SerializeObject(room);
+
+		await roomRef.SetRawJsonValueAsync(json);
+
+		roomRef.Child("state").ValueChanged += OnRoomStateChange;
+	}
+
+	private void OnRoomStateChange(object sender, ValueChangedEventArgs e)
+	{
+		//GetValue(true)는 자료형이 스냅샷 안에서 자동으로 integer로 변환이 된다.
+		object value = e.Snapshot.GetValue(true);
+
+		int state = int.Parse(value.ToString());
+		//value.Equals((int)RoomState.Playing)
+		if (state == 1)
+		{   //게임 스타트
+
+			onGameStart?.Invoke(currentRoom, true);
+			//게임이 종료될 시 이벤트 구독 해제해줘야함.
+			roomRef.Child("turn").ChildAdded += OnTurnAdded;
+		}
+		else if (state == 2)
+		{   //게임이 끝
+
+
+		}
+	}
+
+	private void OnTurnAdded(object sender, ChildChangedEventArgs e)
+	{
+		string json = e.Snapshot.GetRawJsonValue();
+		Turn turn = JsonConvert.DeserializeObject<Turn>(json);
+
+		onTurnProcceed?.Invoke(turn);
+
+	}
+	int turnCount;
+	public void SendTurn(int turnCount, Turn turn)
+	{
+		turn.isHostTurn = isHost;
+
+		string json = JsonConvert.SerializeObject(turn);
+		this.turnCount = turnCount;
+		roomRef.Child($"turn/{turnCount}").SetRawJsonValueAsync(json);
+	}
+
+	public async Task<bool> GetTurn()
+	{
+		DataSnapshot turnSnapshot = await turnRef.GetValueAsync();
+
+		if (turnSnapshot.Exists)
+		{
+			string turnJson = turnSnapshot.Children.LastOrDefault().GetRawJsonValue();
+			Turn turn = JsonConvert.DeserializeObject<Turn>(turnJson);
+			if (turn != null)
+			{
+				return turn.isHostTurn != isHost;
+			}
+		}
+		return isHost;
+	}
+
+	private async void JoinRoom(string host)
+	{
+		roomRef = DB.GetReference($"rooms/{host}");
+		turnRef = DB.GetReference($"rooms/{host}/turn");
+
+		DataSnapshot roomSnapshot = await roomRef.GetValueAsync();
+
+		string roomJson = roomSnapshot.GetRawJsonValue();
+
+		Room room = JsonConvert.DeserializeObject<Room>(roomJson);
+
+		currentRoom = room;
+
+		isHost = false;
+
+		await roomRef.Child("state").SetValueAsync((int)RoomState.Playing);
+
+		onGameStart?.Invoke(room, false);
+		roomRef.Child("turn").ChildAdded += OnTurnAdded;
+	}
+
+	public async Task MessageToTarget(string target, Message message)
+	{
+		DatabaseReference targetRef = DB.GetReference($"msg/{target}");
+		string messageJson = JsonConvert.SerializeObject(message);
+		await targetRef.Child(message.displayName + message.sendTime).SetRawJsonValueAsync(messageJson);
 	}
 
 	private async void Start()
@@ -102,11 +264,15 @@ public class FirebaseManager : MonoBehaviour
 			currentUserData = userData;
 
 			callBack?.Invoke(result.User, currentUserData);
+
+			onLogin?.Invoke();
+
 		}
 		catch (FirebaseException e)
 		{
 			UIManager.Instance.PopUpOpen<UIDialogPopUp>().SetPopUp("로그인 실패", "이메일 또는 비밀번호가 틀렸습니다.");
 			Debug.LogWarning(e.Message);
+
 		}
 	}
 
@@ -151,6 +317,7 @@ public class FirebaseManager : MonoBehaviour
 	internal void SignOut()
 	{
 		Auth.SignOut();
+		msgRef.ChildAdded -= OnMessageReceive;
 	}
 }
 
