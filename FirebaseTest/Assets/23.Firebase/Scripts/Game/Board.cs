@@ -1,6 +1,9 @@
+using JetBrains.Annotations;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
+using System.Xml.Serialization;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,7 +18,7 @@ public class Board : MonoBehaviour
 	public bool isHost;
 	public int turnCount = 0;
 
-	private int[][] board;
+	//private int[][] board;
 
 
 	private void Awake()
@@ -28,7 +31,7 @@ public class Board : MonoBehaviour
 			{
 				cells[cellNum].coodinate = $"{(char)(x + 65)}{y + 1}";
 				cellNum++;
-				board[y][x] = 0;
+				//board[y][x] = 0;
 			}
 		}
 
@@ -56,19 +59,47 @@ public class Board : MonoBehaviour
 
 		Cell targetCell = cellDictionary[coodinate];
 
-
-		Parssing(coodinate);
-
+		if (isBlue)
+		{
+			targetCell.whoisyourMaster = 1;
+		}
+		else
+		{
+			targetCell.whoisyourMaster = 2;
+		}
 		Instantiate(prefab, targetCell.transform, false);
 		targetCell.isClick = true;
-		//cellDictionary.Remove(coodinate);
+		Parssing(coodinate);
 	}
 
-	char[] chars;
+
 	private void Parssing(string coodinate)
 	{
-		coodinate.Split(chars);
+		int x = coodinate[0] - 65;
+		int y = coodinate[1] - 49;
+		Vector2 point = new Vector2(x, y);
+		CheckUpDown(point, 0, 1);
+	}
 
+	int count = 0;
+	private void CheckUpDown(Vector2 point, int xDir, int yDir)
+	{
+		string recood = $"{(char)(point.x + 65)}{point.y + 1}";
+		Cell nextCell = cellDictionary[recood];
+		if (nextCell.isClick)
+		{
+			count += nextCell.whoisyourMaster;
+		}
+		else
+		{
+			CheckUpDown(point, xDir, yDir);
+		}
+
+
+		if (count == 4)
+		{
+			return;
+		}
 
 	}
 }

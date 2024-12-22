@@ -13,6 +13,8 @@ public class Cell : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IP
 
 	public bool isClick = false;
 
+	public int whoisyourMaster = 0;
+
 	private GameObject blueMark;
 	private GameObject redMark;
 
@@ -26,14 +28,12 @@ public class Cell : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IP
 
 	public async void OnPointerClick(PED eventData)
 	{
-		//print(coodinate);
 		if (isClick) return;
 
 		bool ismyFukingTurn = await FirebaseManager.Instance.GetTurn();
 		if (ismyFukingTurn)
 		{
 			board.SelectCell(this);
-			//isClick = true;
 		}
 	}
 

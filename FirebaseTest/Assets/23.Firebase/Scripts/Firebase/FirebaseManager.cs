@@ -137,13 +137,12 @@ public class FirebaseManager : MonoBehaviour
 		onTurnProcceed?.Invoke(turn);
 
 	}
-	int turnCount;
+
 	public void SendTurn(int turnCount, Turn turn)
 	{
 		turn.isHostTurn = isHost;
 
 		string json = JsonConvert.SerializeObject(turn);
-		this.turnCount = turnCount;
 		roomRef.Child($"turn/{turnCount}").SetRawJsonValueAsync(json);
 	}
 
